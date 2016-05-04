@@ -22,10 +22,12 @@ brooklyn.catalog:
   name: MySql Node
   description: MySql is an open source relational database management system (RDBMS)
   itemType: template
+  iconUrl: http://www-jp.mysql.com/common/logos/mysql-logo.svg
   license: Apache-2.0
   publish:
     license_code: Apache-2.0
     reference: reference.json
+    qa: catalog.tests.bom
   item:
     services:
     - type: org.apache.brooklyn.entity.database.mysql.MySqlNode

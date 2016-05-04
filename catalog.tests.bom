@@ -1,0 +1,150 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+brooklyn.catalog:
+  items:
+  - id: mysql-node-tests
+    version: 0.10.0-SNAPSHOT
+    itemType: template
+    iconUrl: http://www-jp.mysql.com/common/logos/mysql-logo.svg
+    name: MySql Node tests
+    description: Test that MySql Node is running correctly
+    license_code: Apache-2.0
+    license_url: http://www.apache.org/licenses/LICENSE-2.0.txt
+    item:
+      services:
+      - type: org.apache.brooklyn.test.framework.TestCase
+        name: Config Keys Tests
+        targetId: mysqlnode
+        brooklyn.children:
+        - type: brooklyn-mysql-node
+          id: mysqlnode
+          brooklyn.config:
+            datastore.creation.script.contents: |
+              CREATE DATABASE temporary;
+              USE temporary;
+              CREATE TABLE users (name VARCHAR(20), owner VARCHAR(20), creation_date DATE, updated_date DATE);
+              INSERT INTO users VALUES ('mysql', 'mysql', CURDATE(), CURDATE())
+            mysql.port: 6789
+
+        # Sensors tests
+        - type: org.apache.brooklyn.test.framework.TestSensor
+          name: Check server is up
+          target: $brooklyn:component("mysqlnode")
+          sensor: service.isUp
+          timeout: 10m
+          assert:
+          - equals: true
+        - type: org.apache.brooklyn.test.framework.TestSensor
+          name: Check port is setup correctly
+          target: $brooklyn:component("mysqlnode")
+          sensor: mysql.port
+          timeout: 1m
+          assert:
+          - equals: 6789
+        - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
+          name: Check creating script has been executed
+          runDir: $brooklyn:component("mysqlnode").attributeWhenReady("run.dir")
+          command: $brooklyn:formatString("%s/bin/mysql --defaults-file=mymysql.cnf -N -e 'SELECT count(*) FROM users' temporary", $brooklyn:component("mysqlnode").attributeWhenReady("expandedinstall.dir"))
+          assertStatus:
+            equals: 0
+          assertOut:
+            equals: "1"
+          assertErr:
+            isEmpty: true
+
+        # Effector tests
+        - type: org.apache.brooklyn.test.framework.TestEffector
+          name: Invoke execute script Effector for MySql Node
+          target: $brooklyn:component("mysqlnode")
+          effector: executeScript
+          params:
+            commands: |
+              USE temporary;
+              INSERT INTO users VALUES ('root', 'root', CURDATE(), CURDATE());
+              SELECT count(*) from users;
+          timeout: 1m
+          assertStatus:
+            equals: 0
+          assertOut:
+            matches: count\(\*\).*2
+          assertErr:
+            isEmpty: true
+
+        - type: org.apache.brooklyn.test.framework.TestEffector
+          name: Invoke restart Effector for MySql Node
+          target: $brooklyn:component("mysqlnode")
+          effector: restart
+          params:
+            restartMachine: false
+          timeout: 5m
+        - type: org.apache.brooklyn.test.framework.TestSensor
+          name: Check MySql is up after restart
+          target: $brooklyn:component("mysqlnode")
+          sensor: service.isUp
+          timeout: 1m
+          assert:
+          - equals: true
+        - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
+          name: Check MySql process has restarted
+          command: ps -ef | grep [m]ysql
+          assertStatus:
+            equals: 0
+          assertOut:
+            isEmpty: false
+          assertErr:
+            isEmpty: true
+
+        - type: org.apache.brooklyn.test.framework.TestEffector
+          name: Invoke change password Effector for MySql Node
+          target: $brooklyn:component("mysqlnode")
+          effector: change_password
+          params:
+            password: myPassword
+          timeout: 1m
+        - type: org.apache.brooklyn.test.framework.TestSensor
+          name: Check MySql password has changed
+          target: $brooklyn:component("mysqlnode")
+          sensor: mysql.password
+          timeout: 1m
+          assert:
+          - equals: myPassword
+
+        - type: org.apache.brooklyn.test.framework.TestEffector
+          name: Invoke Stop Effector for MySql Node
+          target: $brooklyn:component("mysqlnode")
+          effector: stop
+          params:
+            stopMachineMode: NEVER
+          timeout: 5m
+        - type: org.apache.brooklyn.test.framework.TestSensor
+          name: Check MySql is not up after stop
+          target: $brooklyn:component("mysqlnode")
+          sensor: service.isUp
+          timeout: 5m
+          assert:
+          - equals: false
+        - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
+          name: Check MySql process has stopped
+          command: ps -ef | grep [m]ysql
+          assertStatus:
+            equals: 1
+          assertOut:
+            isEmpty: true
+          assertErr:
+            isEmpty: true
