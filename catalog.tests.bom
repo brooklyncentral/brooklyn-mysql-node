@@ -18,7 +18,7 @@
 #
 brooklyn.catalog:
   id: brooklyn-mysql-node-tests
-  version: 0.10.0-SNAPSHOT
+  version: 0.2
   itemType: template
   iconUrl: http://www-jp.mysql.com/common/logos/mysql-logo.svg
   name: MySQL Node tests
@@ -27,36 +27,31 @@ brooklyn.catalog:
   license_url: http://www.apache.org/licenses/LICENSE-2.0.txt
   item:
     services:
+    - type: brooklyn-mysql-node
+      id: mysqlnode
+      name: MySQL Node
+      brooklyn.config:
+        datastore.creation.script.contents: |
+          CREATE DATABASE temporary;
+          USE temporary;
+          CREATE TABLE users (name VARCHAR(20), owner VARCHAR(20), creation_date DATE, updated_date DATE);
+          INSERT INTO users VALUES ('mysql', 'mysql', CURDATE(), CURDATE())
     - type: org.apache.brooklyn.test.framework.TestCase
       name: MySQL Node tests
       targetId: mysqlnode
+      brooklyn.config:
+        timeout: 15m
       brooklyn.children:
-      - type: brooklyn-mysql-node
-        id: mysqlnode
-        brooklyn.config:
-          datastore.creation.script.contents: |
-            CREATE DATABASE temporary;
-            USE temporary;
-            CREATE TABLE users (name VARCHAR(20), owner VARCHAR(20), creation_date DATE, updated_date DATE);
-            INSERT INTO users VALUES ('mysql', 'mysql', CURDATE(), CURDATE())
-          mysql.port: 6789
 
-      # Sensors tests
+      # Base tests
       - type: org.apache.brooklyn.test.framework.TestCase
-        name: Sensors Tests
+        name: Base Tests
         brooklyn.children:
         - type: org.apache.brooklyn.test.framework.TestSensor
           name: Check MySQL server is up
           sensor: service.isUp
-          timeout: 10m
           assert:
           - equals: true
-        - type: org.apache.brooklyn.test.framework.TestSensor
-          name: Check MySQL port is setup correctly
-          sensor: mysql.port
-          timeout: 1m
-          assert:
-          - equals: 6789
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
           name: Check MySQL creating script has been executed
           runDir: $brooklyn:entity("mysqlnode").attributeWhenReady("run.dir")
@@ -79,7 +74,6 @@ brooklyn.catalog:
             commands: |
               USE temporary;
               INSERT INTO users VALUES ('root', 'root', CURDATE(), CURDATE());
-          timeout: 1m
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
           name: Check MySQL creating script has been executed
           runDir: $brooklyn:entity("mysqlnode").attributeWhenReady("run.dir")
@@ -87,7 +81,7 @@ brooklyn.catalog:
           assertStatus:
             equals: 0
           assertOut:
-            matches: "2"
+            equals: "2"
           assertErr:
             isEmpty: true
 
@@ -100,11 +94,9 @@ brooklyn.catalog:
           effector: restart
           params:
             restartMachine: false
-          timeout: 5m
         - type: org.apache.brooklyn.test.framework.TestSensor
           name: Check MySQL is up after restart
           sensor: service.isUp
-          timeout: 1m
           assert:
           - equals: true
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
@@ -112,10 +104,6 @@ brooklyn.catalog:
           command: ps -ef | grep [m]ysql
           assertStatus:
             equals: 0
-          assertOut:
-            isEmpty: false
-          assertErr:
-            isEmpty: true
 
       # Effector: stop + restart Tests
       - type: org.apache.brooklyn.test.framework.TestCase
@@ -126,11 +114,9 @@ brooklyn.catalog:
           effector: stop
           params:
             stopMachineMode: NEVER
-          timeout: 5m
         - type: org.apache.brooklyn.test.framework.TestSensor
           name: Check MySQL is not up after stop
           sensor: service.isUp
-          timeout: 5m
           assert:
           - equals: false
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
@@ -138,20 +124,14 @@ brooklyn.catalog:
           command: ps -ef | grep [m]ysql
           assertStatus:
             equals: 1
-          assertOut:
-            isEmpty: true
-          assertErr:
-            isEmpty: true
         - type: org.apache.brooklyn.test.framework.TestEffector
           name: Invoke restart Effector
           effector: restart
           params:
             restartMachine: false
-          timeout: 5m
         - type: org.apache.brooklyn.test.framework.TestSensor
           name: Check MySQL is up after restart
           sensor: service.isUp
-          timeout: 1m
           assert:
           - equals: true
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
@@ -159,10 +139,6 @@ brooklyn.catalog:
           command: ps -ef | grep [m]ysql
           assertStatus:
             equals: 0
-          assertOut:
-            isEmpty: false
-          assertErr:
-            isEmpty: true
 
       # Effector: change_password Tests
       - type: org.apache.brooklyn.test.framework.TestCase
@@ -173,10 +149,8 @@ brooklyn.catalog:
           effector: change_password
           params:
             password: myPassword
-          timeout: 1m
         - type: org.apache.brooklyn.test.framework.TestSensor
           name: Check MySQL password has changed
           sensor: mysql.password
-          timeout: 1m
           assert:
           - equals: myPassword
