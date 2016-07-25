@@ -101,7 +101,7 @@ brooklyn.catalog:
           - equals: true
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
           name: Check MySQL process has restarted
-          command: ps -ef | grep [m]ysql
+          command: ps -ef | grep [m]ysql | grep -v 'dhclient'
           assertStatus:
             equals: 0
 
@@ -121,7 +121,7 @@ brooklyn.catalog:
           - equals: false
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
           name: Check MySQL process has stopped
-          command: ps -ef | grep [m]ysql
+          command: ps -ef | grep [m]ysql | grep -v 'dhclient'
           assertStatus:
             equals: 1
         - type: org.apache.brooklyn.test.framework.TestEffector
@@ -136,7 +136,7 @@ brooklyn.catalog:
           - equals: true
         - type: org.apache.brooklyn.test.framework.SimpleShellCommandTest
           name: Check MySQL process has restarted
-          command: ps -ef | grep [m]ysql
+          command: ps -ef | grep [m]ysql | grep -v 'dhclient'
           assertStatus:
             equals: 0
 
