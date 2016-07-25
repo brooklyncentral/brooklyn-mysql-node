@@ -31,3 +31,14 @@ brooklyn.catalog:
   item:
     services:
     - type: org.apache.brooklyn.entity.database.mysql.MySqlNode
+      # add a pre-install so it makes sure perl is installed
+      brooklyn.config:
+        pre.install.command: |
+          if [[ ! -z $(which yum) ]]; then
+            sudo yum -y install perl
+          elif [[ ! -z $(which apt-get) ]]; then
+            sudo apt-get install -y perl
+          else
+            echo "error can't install perl"
+            exit 1;
+          fi
