@@ -35,9 +35,9 @@ brooklyn.catalog:
       brooklyn.config:
         pre.install.command: |
           if [[ ! -z $(which yum) ]]; then
-            sudo yum -y install perl
+            sudo yum -y install perl perl-Data-Dumper
           elif [[ ! -z $(which apt-get) ]]; then
-            sudo apt-get install -y perl
+            sudo apt-get install -y perl libdata-dumper-concise-perl
           else
             echo "error can't install perl"
             exit 1;
