@@ -27,6 +27,7 @@ brooklyn.catalog:
   license_url: http://www.apache.org/licenses/LICENSE-2.0.txt
   item:
     services:
+    - "https://raw.githubusercontent.com/brooklyncentral/common-catalog-utils/master/common-tests/src/main/resources/commontests/common.tests.bom"
     - type: brooklyn-mysql-node
       id: mysqlnode
       name: MySQL Node
