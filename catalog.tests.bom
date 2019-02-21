@@ -22,7 +22,7 @@ brooklyn.catalog:
   - id: brooklyn-mysql-node-tests
     version: 0.2
     itemType: template
-    iconUrl: http://www-jp.mysql.com/common/logos/mysql-logo.svg
+    iconUrl: https://www.mysql.com/common/logos/mysql-logo.svg
     name: MySQL Node tests
     description: Test that MySQL Node is running correctly
     license_code: Apache-2.0
